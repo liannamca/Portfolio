@@ -1,0 +1,157 @@
+# -----------------------------------------------------------------------------#
+# Script Overview:
+# This R script analyzes transaction data from the Atrium System
+# at the University of Georgia for the Fall 2024 semester. The analysis includes:
+# 1. Distribution of cumulative transactions based on Campus ID.
+# 2. Summary statistics for weekday transactions.
+# 3. Average and median transaction counts for All-Access Plans on weekdays and weekends.
+# 4. Visualizations using ggplot2 and plotly to present transaction distributions.
+# The dataset used is stored in 'Atrium_Base.csv'.
+
+# This script was written by Lianna Marie McAuliffe
+# october 4, 2024
+# -----------------------------------------------------------------------------#
+
+
+# Load necessary libraries
+library(tidyverse)
+library(plotly)
+
+# Read data
+Atrium_Base <- read.csv("INSERT CSV HERE")
+
+# -----------------------------------------------------------------------------#
+# Analyze distribution of cumulative transactions based on Campus ID
+
+# Summarize transactions by Campus ID
+Atrium_Transformed <- Atrium_Base %>%
+  group_by(CampusID) %>%
+  summarize(Trans_count = n(), .groups = 'drop')
+
+# Assess summary statistics
+Trans_Median <- median(Atrium_Transformed$Trans_count)
+Trans_Mean <- mean(Atrium_Transformed$Trans_count)
+
+# Plot the distribution of transactions
+Base_Data_Dist <- ggplot(Atrium_Transformed, aes(x = Trans_count)) +
+  geom_histogram(binwidth = 1, fill = 'darkblue', color = 'white', alpha = 0.5) +
+  geom_vline(xintercept = Trans_Median, color = 'red') +
+  geom_vline(xintercept = Trans_Mean, color = 'darkorange') +
+  xlim(0, 200) +
+  theme_bw() +
+  labs(title = "Transaction Distribution: Atrium Fall 2024",
+       x = "Cumulative Transactions")
+
+ggplotly(Base_Data_Dist)
+
+# -----------------------------------------------------------------------------#
+# Analyze entrances by day of the week
+
+Atrium_WeekDay <- Atrium_Base %>%
+  group_by(CampusID, WeekDay) %>%
+  summarize(count = n(), .groups = 'drop')
+
+# Set factor levels for weekdays
+day_levels <- c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+Atrium_WeekDay$WeekDay <- factor(Atrium_WeekDay$WeekDay, levels = day_levels)
+
+# Plot entrances by day of the week
+Atrium_Weekday_Entrances <- ggplot(Atrium_WeekDay, aes(x = WeekDay, y = count)) +
+  geom_bar(stat = 'identity', fill = "blue", alpha = 0.5) +
+  theme_bw() +
+  labs(title = "Fall 2024 Entrances by Day of the Week", 
+       x = "Day of the Week", 
+       y = "Entrance Counts")
+
+ggplotly(Atrium_Weekday_Entrances)
+
+# -----------------------------------------------------------------------------#
+# Calculate average and median transactions for All-Access Plans (Weekdays)
+
+average_transactions_weekday_AA <- Atrium_Base %>%
+  filter(WeekDay %in% c("Mon", "Tue", "Wed", "Thu", "Fri"),
+         grepl("All-Access", AccountName)) %>%
+  group_by(CampusID) %>%
+  summarize(transaction_count = n(), .groups = 'drop') %>%
+  summarize(average_transactions = mean(transaction_count), .groups = 'drop')
+
+median_transactions_weekday_AA <- Atrium_Base %>%
+  filter(WeekDay %in% c("Mon", "Tue", "Wed", "Thu", "Fri"),
+         grepl("All-Access", AccountName)) %>%
+  group_by(CampusID) %>%
+  summarize(transaction_count = n(), .groups = 'drop') %>%
+  summarize(median_transactions = median(transaction_count), .groups = 'drop')
+
+# Print average and median transactions
+print(average_transactions_weekday_AA)
+print(median_transactions_weekday_AA)
+
+# Boxplot for All-Access Plan students
+average_transactions_dist <- Atrium_Base %>%
+  filter(WeekDay %in% c("Mon", "Tue", "Wed", "Thu", "Fri"),
+         grepl("All-Access", AccountName)) %>%
+  group_by(CampusID) %>%
+  summarize(transaction_count = n(), .groups = 'drop')
+
+Boxplot_Weekday_AA <- ggplot(data = average_transactions_dist, aes(x = "", y = transaction_count)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Transactions for All-Access Plan Students",
+       x = "", y = "Number of Transactions") +
+  theme_minimal()
+
+ggplotly(Boxplot_Weekday_AA)
+
+# Histogram for filtered transactions
+mean_filtered_dist <- mean(average_transactions_dist$transaction_count)
+median_filtered_dist <- median(average_transactions_dist$transaction_count)
+
+Histogram_Weekday_AA <- ggplot(data = average_transactions_dist, aes(x = transaction_count)) +
+  geom_histogram(fill = 'darkblue', color = 'white', alpha = 0.5) +
+  geom_vline(xintercept = mean_filtered_dist, color = 'red') +
+  geom_vline(xintercept = median_filtered_dist, color = 'darkorange') +
+  theme_bw() +
+  labs(title = "Distribution of All-Access Meal Plans: Monday-Friday",
+       x = "Count of Transactions")
+
+ggplotly(Histogram_Weekday_AA)
+
+# -----------------------------------------------------------------------------#
+# Calculate average and median transactions for All-Access Plans (Weekends)
+
+average_transactions_weekend_AA <- Atrium_Base %>%
+  filter(WeekDay %in% c("Sat", "Sun"),
+         grepl("All-Access", AccountName)) %>%
+  group_by(CampusID) %>%
+  summarize(transaction_count = n(), .groups = 'drop') %>%
+  summarize(average_transactions = mean(transaction_count), .groups = 'drop')
+
+median_transactions_weekend_AA <- Atrium_Base %>%
+  filter(WeekDay %in% c("Sat", "Sun"),
+         grepl("All-Access", AccountName)) %>%
+  group_by(CampusID) %>%
+  summarize(transaction_count = n(), .groups = 'drop') %>%
+  summarize(median_transactions = median(transaction_count), .groups = 'drop')
+
+# Print weekend average and median transactions
+print(average_transactions_weekend_AA)
+print(median_transactions_weekend_AA)
+
+# Observe overall distribution for weekends
+distribution_weekend_AA <- Atrium_Base %>%
+  filter(WeekDay %in% c("Sat", "Sun"),
+         grepl("All-Access", AccountName)) %>%
+  group_by(CampusID) %>%
+  summarize(transaction_count = n(), .groups = 'drop')
+
+mean_filtered_dist_weekend <- mean(distribution_weekend_AA$transaction_count)
+median_filtered_dist_weekend <- median(distribution_weekend_AA$transaction_count)
+
+Histogram_Weekend_AA <- ggplot(data = distribution_weekend_AA, aes(x = transaction_count)) +
+  geom_histogram(fill = 'darkblue', color = 'white', alpha = 0.5) +
+  geom_vline(xintercept = mean_filtered_dist_weekend, color = 'red') +
+  geom_vline(xintercept = median_filtered_dist_weekend, color = 'darkorange') +
+  theme_bw() +
+  labs(title = "Distribution of All-Access Meal Plans: Saturday-Sunday",
+       x = "Count of Transactions")
+
+ggplotly(Histogram_Weekend_AA)
